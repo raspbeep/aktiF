@@ -1,20 +1,19 @@
-from datetime import datetime, timedelta
+from datetime import datetime
 from multiprocessing import cpu_count
 from multiprocessing.pool import ThreadPool
-from lxml import etree  # lxml
-from lxml.etree import QName, SubElement  # lxml
-import requests  # requests
+from lxml import etree
+from lxml.etree import QName
+import requests
 from requests.adapters import HTTPAdapter
 from requests.packages.urllib3.util.retry import Retry
-from tqdm import tqdm
 from io import BytesIO
 from PyQt5 import QtCore, QtWidgets
 import os
 import sys
 import time
-import av  # a# v
-# aby drzal picu
-av.logging.set_level(av.logging.PANIC)
+import av
+av.logging.set_level(av.logging.PANIC) #shut up
+
 
 class Stream:
     def __init__(self, stream_type, bitrate, codec, quality, base_url):
@@ -26,6 +25,7 @@ class Stream:
 
     def __str__(self):
         return f"{self.quality:{' '}{'>'}{9}} Bitrate: {self.bitrate:{' '}{'>'}{8}} Codec: {self.codec}"
+
 
 class Segment:
     def __init__(self, stream, seg_num):
@@ -51,7 +51,6 @@ class Window(object):
 
     def get_mpd_data(self, video_url):
         page = self.get(video_url).text
-
         if 'dashManifestUrl\\":\\"' in page:
             mpd_link = page.split('dashManifestUrl\\":\\"')[-1].split('\\"')[0].replace("\/", "/")
         elif 'dashManifestUrl":"' in page:
@@ -152,12 +151,12 @@ class Window(object):
         self.label_from_time = QtWidgets.QLabel(self.centralwidget)
         self.label_from_time.setGeometry(25, 140, 70, 16)
         self.label_from_time.setObjectName("label_from_time")
-        self.label_from_time.setText("From time:")
+        self.label_from_time.setText("From time (keep this format):")
 
         self.label_to_time = QtWidgets.QLabel(self.centralwidget)
         self.label_to_time.setGeometry(25, 190, 50, 16)
         self.label_to_time.setObjectName("label_to_time")
-        self.label_to_time.setText("To time:")
+        self.label_to_time.setText("To time (keep this format):")
 
         self.label_output_file = QtWidgets.QLabel(self.centralwidget)
         self.label_output_file.setGeometry(25, 240, 50, 16)
@@ -177,7 +176,7 @@ class Window(object):
         # TEXT INPUTS
         self.url_input = QtWidgets.QLineEdit(self.centralwidget)
         self.url_input.setGeometry(10, 40, 350, 20)
-        self.url_input.setText("https://www.youtube.com/watch?v=5qap5aO4i9A")
+        #self.url_input.setText("")
         self.url_input.setObjectName("url_input")
 
         self.from_time_input = QtWidgets.QLineEdit(self.centralwidget)
@@ -195,7 +194,7 @@ class Window(object):
         self.file_name_input = QtWidgets.QLineEdit(self.centralwidget)
         self.file_name_input.setGeometry(20, 260, 220, 20)
         self.file_name_input.setObjectName("file_name_input")
-        self.file_name_input.setText("gfdsa")
+        self.file_name_input.setText("new_video")
         self.file_name_input.setDisabled(True)
 
         # COMBO BOXES
@@ -352,13 +351,13 @@ class Window(object):
         for seg in seg_range:
             segments.append(Segment(stream, seg))
 
-        self.progress_bar.setMaximum(len(segments) - 1)
-        self.downloaded_parts = 0
+        #self.progress_bar.setMaximum(len(segments) - 1)
+        #self.downloaded_parts = 0
 
         results = ThreadPool(threads).map(self.download_func, segments)
         combined_file = BytesIO()
 
-        for res in tqdm(results, total=len(segments), unit="seg"):
+        for res in results:
             combined_file.write(res)
 
         return combined_file
@@ -391,7 +390,6 @@ class Window(object):
 
             packet.stream = output_video
             output.mux(packet)
-
 
         self.last_pts = 0
         self.step = 0

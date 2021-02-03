@@ -2,5 +2,11 @@ av
 click
 lxml
 requests
-tqdm
-setuptools
+multiprocessing
+datetime
+requests
+time
+sys
+os
+PyQt5
+io
