@@ -2,11 +2,6 @@ av
 click
 lxml
 requests
-multiprocessing
 datetime
 requests
-time
-sys
-os
 PyQt5
-io

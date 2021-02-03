@@ -149,12 +149,12 @@ class Window(object):
         self.label_audio_options.setText("Audio:")
 
         self.label_from_time = QtWidgets.QLabel(self.centralwidget)
-        self.label_from_time.setGeometry(25, 140, 70, 16)
+        self.label_from_time.setGeometry(25, 140, 180, 16)
         self.label_from_time.setObjectName("label_from_time")
         self.label_from_time.setText("From time (keep this format):")
 
         self.label_to_time = QtWidgets.QLabel(self.centralwidget)
-        self.label_to_time.setGeometry(25, 190, 50, 16)
+        self.label_to_time.setGeometry(25, 190, 180, 16)
         self.label_to_time.setObjectName("label_to_time")
         self.label_to_time.setText("To time (keep this format):")
 
