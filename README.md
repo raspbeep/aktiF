@@ -1,9 +1,14 @@
-# Fitka
-
+# Aktif
 
 Just another barely functional tool to download YouTube livestreams.
 
-### Install (pip)
+### Download
+```shell
+git clone https://github.com/raspbeep/Aktif.git
+```
+
+
+### Install requirements(pip)
 
 ```shell
 pip install -r requirements.txt
@@ -20,7 +25,7 @@ Currently, very fragile yet intuitive and (hopefully) working correctly.
 4. Click Download and hope for the best!
 
 
-## Python compatibility
+#### Python compatibility
 
 -   3.6+
 
