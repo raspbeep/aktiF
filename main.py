@@ -37,8 +37,6 @@ class Segment:
 
 # TODO multithreading na update progress baru
 
-
-
 class Window(object):
     def __init__(self, Window):
         self.setupUi(Window)
@@ -107,7 +105,6 @@ class Window(object):
         v_streams.sort(key=lambda x: x.bitrate, reverse=True)
         return a_streams, v_streams, total_seg, d_time, seg_len
 
-
     def setupUi(self, MainWindow):
         MainWindow.setObjectName("MainWindow")
         MainWindow.resize(500, 400)
@@ -135,7 +132,6 @@ class Window(object):
         self.download_button.setObjectName("download_button")
         self.download_button.setText("Download")
         self.download_button.setDisabled(True)
-
 
         # LABELS
         self.label = QtWidgets.QLabel(self.centralwidget)
@@ -234,15 +230,14 @@ class Window(object):
         self.statusbar.setObjectName("statusbar")
         MainWindow.setStatusBar(self.statusbar)
 
-        # PROGRESS BAR
+        '''# PROGRESS BAR
         self.progress_bar = QtWidgets.QProgressBar(self.centralwidget)
         self.progress_bar.setObjectName("progress_bar")
         self.progress_bar.setGeometry(20, 270, 350, 80)
         self.progress_bar.setMaximum(5)
         self.progress_bar.setMinimum(0)
         self.progress_bar.setValue(2)
-        self.progress_bar.show()
-
+        self.progress_bar.show()'''
 
         # TRIGGERS
         self.pushButton.clicked.connect(self.get_download_options)
@@ -349,7 +344,6 @@ class Window(object):
         tasks = [[self.v_streams[video_format], range(self.start_segment, self.end_segment), int(self.download_threads)],
                  [self.a_streams[audio_format], range(self.start_segment, self.end_segment), int(self.download_threads)]]
 
-
         with concurrent.futures.ThreadPoolExecutor() as executor:
             v_data, a_data = executor.map(self.download, tasks)
 
@@ -396,7 +390,7 @@ class Window(object):
 
         self.last_pts = 0
         self.step = 0
-
+        #self.statusbar.showMessage("video")
         for packet in video_p:
             if packet.dts is None:
                 continue
@@ -407,7 +401,7 @@ class Window(object):
 
             packet.stream = output_video
             output.mux(packet)
-
+        #self.statusbar.showMessage("audio")
         self.last_pts = 0
         self.step = 0
         for packet in audio_p:
