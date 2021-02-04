@@ -1,4 +1,4 @@
-# Aktif
+# aktiF
 
 Just another barely functional tool to download YouTube livestreams.
 
