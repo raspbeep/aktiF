@@ -12,6 +12,7 @@ import os
 import sys
 import time
 import av
+import concurrent.futures
 av.logging.set_level(av.logging.PANIC) #shut up
 
 
@@ -35,9 +36,13 @@ class Segment:
         self.success = False
 
 # TODO multithreading na update progress baru
+
+
+
 class Window(object):
     def __init__(self, Window):
         self.setupUi(Window)
+        self.centralwidget.update()
         self.setupApp()
         self.last_pts = 0
 
@@ -151,12 +156,12 @@ class Window(object):
         self.label_from_time = QtWidgets.QLabel(self.centralwidget)
         self.label_from_time.setGeometry(25, 140, 180, 16)
         self.label_from_time.setObjectName("label_from_time")
-        self.label_from_time.setText("From time (keep this format):")
+        self.label_from_time.setText("From (keep this format):")
 
         self.label_to_time = QtWidgets.QLabel(self.centralwidget)
         self.label_to_time.setGeometry(25, 190, 180, 16)
         self.label_to_time.setObjectName("label_to_time")
-        self.label_to_time.setText("To time (keep this format):")
+        self.label_to_time.setText("To (keep this format):")
 
         self.label_output_file = QtWidgets.QLabel(self.centralwidget)
         self.label_output_file.setGeometry(25, 240, 50, 16)
@@ -230,13 +235,14 @@ class Window(object):
         MainWindow.setStatusBar(self.statusbar)
 
         # PROGRESS BAR
-        '''self.progress_bar = QtWidgets.QProgressBar(self.centralwidget)
+        self.progress_bar = QtWidgets.QProgressBar(self.centralwidget)
         self.progress_bar.setObjectName("progress_bar")
-        self.progress_bar.setGeometry(20, 300, 350, 80)
+        self.progress_bar.setGeometry(20, 270, 350, 80)
         self.progress_bar.setMaximum(5)
         self.progress_bar.setMinimum(0)
-        self.progress_bar.setValue(0)
-        self.progress_bar.show()'''
+        self.progress_bar.setValue(2)
+        self.progress_bar.show()
+
 
         # TRIGGERS
         self.pushButton.clicked.connect(self.get_download_options)
@@ -261,6 +267,7 @@ class Window(object):
         self.download_threads = cpu_count()
         for i in range(1, self.download_threads + 1):
             self.thread_combo_box.addItem(str(i))
+        self.thread_combo_box.setCurrentIndex(cpu_count() - 1)
 
     def change_thread_count(self, new_count):
         self.download_threads = new_count
@@ -289,7 +296,10 @@ class Window(object):
         self.download_button.setDisabled(True)
 
     def parse_datetime(self, input_date):
-        return datetime.strptime(input_date, "%Y-%m-%dT%H:%M")
+        try:
+            return datetime.strptime(input_date, "%Y-%m-%dT%H:%M")
+        except:
+            return -1
 
     def check_input_fields(self):
         if self.parse_datetime(self.from_time_input.text()) != -1 and self.parse_datetime(self.to_time_input.text()) != -1 and self.file_name_input.text() != "" and self.file_name_input.text() != " " and self.check_if_exists(f"{self.file_name_input.text()}{self.output_format_combo_box.currentText()}"):
@@ -309,6 +319,12 @@ class Window(object):
 
             if self.end_segment > self.segment_count:
                 self.statusbar.showMessage("Error: You are requesting segments that dont exist yet!")
+        else:
+            self.download_button.setDisabled(True)
+            if self.parse_datetime(self.from_time_input.text()) == -1:
+                self.statusbar.showMessage('Invalid "From" value')
+            elif self.parse_datetime(self.to_time_input.text()) == -1:
+                self.statusbar.showMessage('Invalid "To" value')
 
     def check_if_exists(self, output_name):
 
@@ -330,9 +346,12 @@ class Window(object):
 
         video_format = self.video_combo_box.currentIndex()
         audio_format = self.audio_combo_box.currentIndex()
+        tasks = [[self.v_streams[video_format], range(self.start_segment, self.end_segment), int(self.download_threads)],
+                 [self.a_streams[audio_format], range(self.start_segment, self.end_segment), int(self.download_threads)]]
 
-        v_data = self.download(self.v_streams[video_format], range(self.start_segment, self.end_segment), int(self.download_threads))
-        a_data = self.download(self.a_streams[audio_format], range(self.start_segment, self.end_segment), int(self.download_threads))
+
+        with concurrent.futures.ThreadPoolExecutor() as executor:
+            v_data, a_data = executor.map(self.download, tasks)
 
         self.statusbar.showMessage("Muxing into file", 5000)
 
@@ -346,13 +365,11 @@ class Window(object):
             time.sleep(0.5)
         return req.content
 
-    def download(self, stream, seg_range, threads):
+    def download(self, download_info):
+        stream, seg_range, threads = download_info
         segments = []
         for seg in seg_range:
             segments.append(Segment(stream, seg))
-
-        #self.progress_bar.setMaximum(len(segments) - 1)
-        #self.downloaded_parts = 0
 
         results = ThreadPool(threads).map(self.download_func, segments)
         combined_file = BytesIO()
@@ -414,4 +431,5 @@ if __name__ == "__main__":
     MainWindow = QtWidgets.QMainWindow()
     ui = Window(MainWindow)
     MainWindow.show()
+
     sys.exit(app.exec_())
