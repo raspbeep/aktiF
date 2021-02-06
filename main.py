@@ -1,13 +1,13 @@
 from datetime import datetime
-from multiprocessing import cpu_count
-from multiprocessing.pool import ThreadPool
 from lxml import etree
+import multiprocessing as mp
+import multiprocessing.pool as pool
 from lxml.etree import QName
 import requests
 from requests.adapters import HTTPAdapter
 from requests.packages.urllib3.util.retry import Retry
 from io import BytesIO
-from PyQt5 import QtCore, QtWidgets
+from PyQt5 import QtCore, QtWidgets, QtGui
 import os
 import sys
 import time
@@ -41,10 +41,10 @@ class Window(object):
     def __init__(self, Window):
         self.setupUi(Window)
         self.centralwidget.update()
-        self.setupApp()
+        self.setup_app()
         self.last_pts = 0
 
-    def setupApp(self):
+    def setup_app(self):
         self.d_time = requests.Session()
         self.retry = Retry(connect=5, backoff_factor=0.5)
         self.adapter = HTTPAdapter(max_retries=self.retry)
@@ -152,12 +152,12 @@ class Window(object):
         self.label_from_time = QtWidgets.QLabel(self.centralwidget)
         self.label_from_time.setGeometry(25, 140, 180, 16)
         self.label_from_time.setObjectName("label_from_time")
-        self.label_from_time.setText("From (keep this format):")
+        self.label_from_time.setText("From:")
 
         self.label_to_time = QtWidgets.QLabel(self.centralwidget)
         self.label_to_time.setGeometry(25, 190, 180, 16)
         self.label_to_time.setObjectName("label_to_time")
-        self.label_to_time.setText("To (keep this format):")
+        self.label_to_time.setText("To:")
 
         self.label_output_file = QtWidgets.QLabel(self.centralwidget)
         self.label_output_file.setGeometry(25, 240, 50, 16)
@@ -171,26 +171,28 @@ class Window(object):
 
         self.labe_overwrite_file = QtWidgets.QLabel(self.centralwidget)
         self.labe_overwrite_file.setGeometry(380, 140, 65, 16)
-        self.labe_overwrite_file.setObjectName("labe_overwrite_file")
+        self.labe_overwrite_file.setObjectName("label_overwrite_file")
         self.labe_overwrite_file.setText("Overwrite:")
 
         # TEXT INPUTS
         self.url_input = QtWidgets.QLineEdit(self.centralwidget)
         self.url_input.setGeometry(10, 40, 350, 20)
-        #self.url_input.setText("")
         self.url_input.setObjectName("url_input")
 
-        self.from_time_input = QtWidgets.QLineEdit(self.centralwidget)
+        self.from_time_input = QtWidgets.QDateTimeEdit(self.centralwidget)
         self.from_time_input.setGeometry(20, 160, 220, 20)
-        self.from_time_input.setObjectName("from_time_input")
         self.from_time_input.setDisabled(True)
-        self.from_time_input.setText("2021-02-01T08:00")
+        self.from_time_input.setDisplayFormat("yyyy.MM.dd  HH:mm")
+        self.from_time_input.setDateTime(QtCore.QDateTime.currentDateTime())
+        self.from_time_input.setButtonSymbols(2)
 
-        self.to_time_input = QtWidgets.QLineEdit(self.centralwidget)
+        self.to_time_input = QtWidgets.QDateTimeEdit(self.centralwidget)
         self.to_time_input.setGeometry(20, 210, 220, 20)
-        self.to_time_input.setObjectName("to_time_input")
         self.to_time_input.setDisabled(True)
-        self.to_time_input.setText("2021-02-01T08:01")
+        self.to_time_input.setDisplayFormat("yyyy.MM.dd  HH:mm")
+        self.to_time_input.setDateTime(QtCore.QDateTime.currentDateTime())
+        self.to_time_input.setButtonSymbols(2)
+
 
         self.file_name_input = QtWidgets.QLineEdit(self.centralwidget)
         self.file_name_input.setGeometry(20, 260, 220, 20)
@@ -259,10 +261,10 @@ class Window(object):
                 self.deactivate_input_fields()
 
     def create_cpu_threads_combo_box(self):
-        self.download_threads = cpu_count()
+        self.download_threads = mp.cpu_count()
         for i in range(1, self.download_threads + 1):
             self.thread_combo_box.addItem(str(i))
-        self.thread_combo_box.setCurrentIndex(cpu_count() - 1)
+        self.thread_combo_box.setCurrentIndex(mp.cpu_count() - 1)
 
     def change_thread_count(self, new_count):
         self.download_threads = new_count
@@ -292,7 +294,7 @@ class Window(object):
 
     def parse_datetime(self, input_date):
         try:
-            return datetime.strptime(input_date, "%Y-%m-%dT%H:%M")
+            return datetime.strptime(input_date, "%Y.%m.%d %H:%M")
         except:
             return -1
 
@@ -312,8 +314,12 @@ class Window(object):
 
             self.end_segment = self.start_segment + round(self.duration / self.segment_length)
 
+
+            print(self.end_segment, self.segment_count, self.segment_length, self.duration)
+
             if self.end_segment > self.segment_count:
                 self.statusbar.showMessage("Error: You are requesting segments that dont exist yet!")
+                self.download_button.setDisabled(True)
         else:
             self.download_button.setDisabled(True)
             if self.parse_datetime(self.from_time_input.text()) == -1:
@@ -365,7 +371,7 @@ class Window(object):
         for seg in seg_range:
             segments.append(Segment(stream, seg))
 
-        results = ThreadPool(threads).map(self.download_func, segments)
+        results = pool.ThreadPool(threads).map(self.download_func, segments)
         combined_file = BytesIO()
 
         for res in results:
@@ -382,15 +388,14 @@ class Window(object):
         v_in = video.streams.video[0]
         a_in = audio.streams.audio[0]
 
-        video_p = video.demux()
+        video_p = video.demux(v_in)
         audio_p = audio.demux(a_in)
 
         output_video = output.add_stream(template=v_in)
         output_audio = output.add_stream(template=a_in)
 
         self.last_pts = 0
-        self.step = 0
-        #self.statusbar.showMessage("video")
+
         for packet in video_p:
             if packet.dts is None:
                 continue
@@ -401,9 +406,8 @@ class Window(object):
 
             packet.stream = output_video
             output.mux(packet)
-        #self.statusbar.showMessage("audio")
+
         self.last_pts = 0
-        self.step = 0
         for packet in audio_p:
             if packet.dts is None:
                 continue
