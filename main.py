@@ -7,14 +7,12 @@ import requests
 from requests.adapters import HTTPAdapter
 from requests.packages.urllib3.util.retry import Retry
 from io import BytesIO
-from PyQt5 import QtCore, QtWidgets, QtGui
+from PyQt5 import QtCore, QtWidgets
 import os
 import sys
 import time
 import av
-import concurrent.futures
 av.logging.set_level(av.logging.PANIC) #shut up
-
 
 class Stream:
     def __init__(self, stream_type, bitrate, codec, quality, base_url):
@@ -26,7 +24,6 @@ class Stream:
 
     def __str__(self):
         return f"{self.quality:{' '}{'>'}{9}} Bitrate: {self.bitrate:{' '}{'>'}{8}} Codec: {self.codec}"
-
 
 class Segment:
     def __init__(self, stream, seg_num):
@@ -264,7 +261,7 @@ class Window(object):
         self.download_threads = mp.cpu_count()
         for i in range(1, self.download_threads + 1):
             self.thread_combo_box.addItem(str(i))
-        self.thread_combo_box.setCurrentIndex(mp.cpu_count() - 1)
+        self.thread_combo_box.setCurrentIndex(mp.cpu_count() // 2 - 1)
 
     def change_thread_count(self, new_count):
         self.download_threads = new_count
@@ -315,7 +312,7 @@ class Window(object):
             self.end_segment = self.start_segment + round(self.duration / self.segment_length)
 
 
-            print(self.end_segment, self.segment_count, self.segment_length, self.duration)
+            #print(self.end_segment, self.segment_count, self.segment_length, self.duration)
 
             if self.end_segment > self.segment_count:
                 self.statusbar.showMessage("Error: You are requesting segments that dont exist yet!")
@@ -350,8 +347,7 @@ class Window(object):
         tasks = [[self.v_streams[video_format], range(self.start_segment, self.end_segment), int(self.download_threads)],
                  [self.a_streams[audio_format], range(self.start_segment, self.end_segment), int(self.download_threads)]]
 
-        with concurrent.futures.ThreadPoolExecutor() as executor:
-            v_data, a_data = executor.map(self.download, tasks)
+        v_data, a_data = pool.ThreadPool(int(self.download_threads)).map(self.download, tasks)
 
         self.statusbar.showMessage("Muxing into file", 5000)
 
