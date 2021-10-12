@@ -1,6 +1,6 @@
 # aktiF
 
-Just another barely functional tool to download YouTube livestreams.
+GUI for downloading YouTube livestreams build on top of `youtube-dl`. Added implementation for multithreaded download of video and its muxing. 
 
 ### Download
 ```shell
